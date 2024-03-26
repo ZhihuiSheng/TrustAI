@@ -1,0 +1,446 @@
+---
+title: "AI Trust"
+output: html_notebook
+---
+
+# R environment
+
+```{r}
+# R environment
+R.Version()
+```
+
+# Install necessary packages
+
+```{r}
+ # install.packages(mosaic)
+ # install.packages(supernova)
+ # install.packages(Lock5withR)
+ # install.packages(tidyverse)
+ # install.packages(magrittr)
+ # install.packages(gridExtra)
+ # install.packages(stringr)
+ # install.packages(dplyr)
+ # install.packages(lme4)
+ # install.packages(broom)
+ # install.packages(emmeans)
+```
+
+# Download necessary packages
+
+```{r}
+suppressPackageStartupMessages({
+   library(mosaic)
+   library(supernova)
+   library(Lock5withR)
+   library(tidyverse)
+   library(magrittr)
+   library(gridExtra)
+   library(stringr)
+   library(dplyr)
+   library(lme4)
+   library(broom)
+   library(emmeans)
+    })
+
+```
+
+# Load Data
+
+```{r}
+Raw_AItrust <- read_csv("Excel_Cleaned.csv")
+```
+
+# Data Cleaning
+
+### Rename Columns
+
+```{r}
+Clean_AItrust <- Raw_AItrust %>% 
+  rename( 
+        'Subject' = 'ResponseId',
+        'BaselineTrust'='Baseline_1', #Component of Dependent Variable
+        'FinalTrust'='FinalTrust_1', #Component of Dependent Variable
+        "DurationSec" = 'Duration (in seconds)',
+        #The following columns are data for exploratory analysis that were not included in the paper
+        "TrustQ1_1" = 'TrustQ1_1...27' , 
+         "FeelQ1_1" = 'FeelQ1_1...28',
+         "TrustQ2_1" = 'TrustQ2_1...30' ,
+         "FeelQ2_1" = 'FeelQ2_1...31' ,
+        "TrustQ3_1" = 'TrustQ3_1...33',
+         "FeelQ3_1" = 'FeelQ3_1...34' ,
+        #####
+         "TrustQ1_2" = 'TrustQ1_1...36',
+         "FeelQ1_2" = 'FeelQ2_1...37' ,
+         "TrustQ2_2" = 'TrustQ2_1...39',
+         "FeelQ2_2" = 'FeelQ2_1...40',
+         "TrustQ3_2" = 'TrustQ3_1...42',
+         "FeelQ3_2" = 'FeelQ3_1...43',
+        #####
+         "TrustQ1_3" = 'TrustQ1_1...45',
+         "FeelQ1_3" = 'FeelQ1_1...46',
+         "TrustQ2_3" = 'TrustQ2_1...48',
+         "FeelQ2_3" = 'FeelQ3_1...49' ,
+         "TrustQ3_3" =  'TrustQ3_1...51',
+         "FeelQ3_3" = 'FeelQ3_1...52',
+        #####
+         "TrustQ1_4" = 'TrustQ1_1...54',
+         "FeelQ1_4" = 'FeelQ1_1...55',
+         "TrustQ2_4" = 'TrustQ2_1...57',
+         "FeelQ2_4" = 'FeelQ2_1...58',
+         "TrustQ3_4" = 'TrustQ3_1...60',
+         "FeelQ3_4" = 'FeelQ3_1...61' 
+        )
+```
+
+### Combined columns
+
+This chunk of code is for exploratory analysis that were not included in the paper
+
+```{r}
+# Combined trust ratings for the first ChatGPT response in each condition into a single column called TrustQ1
+Clean_AItrust$TrustQ1 <- coalesce(Clean_AItrust$TrustQ1_1, Clean_AItrust$TrustQ1_2, Clean_AItrust$TrustQ1_3,Clean_AItrust$TrustQ1_4) 
+
+# Combined trust ratings for the second ChatGPT response in each condition into a single column called TrustQ2
+Clean_AItrust$TrustQ2 <- coalesce(Clean_AItrust$TrustQ2_1, Clean_AItrust$TrustQ2_2, Clean_AItrust$TrustQ2_3,Clean_AItrust$TrustQ2_4) 
+
+# Combined trust ratings for the third ChatGPT response in each condition into a single column called TrustQ3
+Clean_AItrust$TrustQ3 <- coalesce(Clean_AItrust$TrustQ3_1, Clean_AItrust$TrustQ3_2, Clean_AItrust$TrustQ3_3,Clean_AItrust$TrustQ3_4) 
+
+# Combined feeling ratings for the first ChatGPT response in each condition into a single column called FeelingQ1
+Clean_AItrust$FeelingQ1 <- coalesce(Clean_AItrust$FeelQ1_1, Clean_AItrust$FeelQ1_2, Clean_AItrust$FeelQ1_3,Clean_AItrust$FeelQ1_4) 
+
+# Combined feeling ratings for the second ChatGPT response in each condition into a single column called FeelingQ2
+Clean_AItrust$FeelingQ2 <- coalesce(Clean_AItrust$FeelQ2_1, Clean_AItrust$FeelQ2_2, Clean_AItrust$FeelQ2_3,Clean_AItrust$FeelQ2_4) 
+
+# Combined feeling ratings for the third ChatGPT response in each condition into a single column called FeelingQ3
+Clean_AItrust$FeelingQ3 <- coalesce(Clean_AItrust$FeelQ3_1, Clean_AItrust$FeelQ3_2, Clean_AItrust$FeelQ3_3,Clean_AItrust$FeelQ3_4) 
+
+```
+
+### Select analysis relevant columns
+
+```{r}
+Clean_AItrust <- Clean_AItrust %>% 
+    select(
+      'College', #Participants' academic information
+        'Status', #Show Survey Preview Response and Real Response 
+        'Subject', #Participant ID
+       'Progress', #Survey Progress
+        "Integrity", #The Integrity and Attention Check Questions 
+        'BaselineTrust', #Participants Trust in ChatGPT before the experiment
+        "FinalTrust", #Participants Trust in ChatGPT at the end of experiment
+        "Version", #Participants' Condition (Independent Variables:Framing Message and ChatGPT response accuracy)
+        
+      # The following variables are for exploratory analysis that's not included in the paper
+       'TrustQ1', #Participants Trust in the first ChatGPT's response
+        'TrustQ2', #Participants Trust in the second ChatGPT's response  
+        'TrustQ3', #Participants Trust in the third ChatGPT's response  
+        "FeelingQ1", #Participants Feeling towards the first ChatGPT's response  
+         "FeelingQ2", #Participants Feeling towards the second ChatGPT's response 
+         "FeelingQ3" #Participants Feeling towards the third ChatGPT's response  
+        )
+```
+
+### Remove non-response cases
+
+```{r}
+Clean_AItrust = Clean_AItrust %>%
+slice(-(1:2)) #getting rid of rows one and two
+```
+
+### Remove ineligible responses
+
+1.  Is Survey preview response
+2.  Failed Integrity and attention check
+
+```{r}
+Clean_AItrust = Clean_AItrust %>%
+    filter(Status != 'Survey Preview' & Integrity != 'No')
+
+## remove these columns afterwards
+Clean_AItrust = Clean_AItrust %>%
+    subset(select = -c(Status, Integrity))
+```
+
+### Create column for Independent Variables
+
+```{r}
+#Info of Framing Message (Negative or Neutral) in Version column store in a new column, FramingM
+Clean_AItrust$FramingM <- str_extract(Clean_AItrust$Version, "Negative|Neutral") 
+
+#Info of ChatGPT Response Accuracy (High or Low) in Version column store in a new column, Accuracy
+Clean_AItrust$Accuracy <- str_extract(Clean_AItrust$Version, "High|Low")
+
+# remove the version column afterwards
+Clean_AItrust = Clean_AItrust %>%
+    subset(select = -c(Version))
+```
+
+### Recode Data Value
+
+```{r}
+#The original data value Neutral in the FramingM column recode to No Messaging
+Clean_AItrust <- Clean_AItrust %>% 
+    mutate(FramingM = case_when(FramingM == "Neutral" ~ "No Messaging",TRUE ~ FramingM)) 
+```
+
+### Convert data types for IV(factors) and DV(integer)
+
+```{r}
+# Factors
+Clean_AItrust <- Clean_AItrust %>% 
+ mutate(
+        FramingM = factor(FramingM, levels = c('No Messaging', 'Negative')),
+        Accuracy = factor(Accuracy, levels = c('High', 'Low'))
+        )
+
+# DV: integer
+Clean_AItrust <- Clean_AItrust %>% 
+  mutate( 
+          BaselineTrust = as.integer(BaselineTrust),
+          FinalTrust = as.integer(FinalTrust),
+        #The following code are for exploratory analysis that were not included
+         TrustQ1 = as.integer(TrustQ1), 
+         TrustQ2 = as.integer(TrustQ2),
+         TrustQ3 = as.integer(TrustQ3),
+         FeelingQ1 = as.integer(FeelingQ1),
+         FeelingQ2 = as.integer(FeelingQ2),
+         FeelingQ3 = as.integer(FeelingQ3)
+         )
+```
+
+### Create Dependent Variable column
+
+```{r}
+Clean_AItrust <- Clean_AItrust %>% 
+  mutate(
+        TrustDiff = FinalTrust - BaselineTrust, #Dependent Variable: Participants' Change in Trust
+        #The following code are for exploratory analysis that were not included
+        Trust3Mean = ((TrustQ1 + TrustQ2 + TrustQ3)/3),  
+        Feeling3Mean = ((FeelingQ1 + FeelingQ2 + FeelingQ3)/3) 
+        ) 
+```
+
+# Data Visualization
+
+### For Paper
+
+```{r}
+Clean_AItrust %>%
+    ggplot(aes(y = TrustDiff, x = FramingM, color = Accuracy, width = 20, height = 50))+
+    stat_summary(
+        fun = mean, 
+        geom = "point",
+        size = 4) +
+    stat_summary(
+        fun = mean, 
+        geom = "line", 
+        size = 1, 
+        aes(group = Accuracy)) +
+    stat_summary(
+        fun.data = mean_se, 
+        geom = "errorbar", 
+        width = 0.2, 
+        size = 1)+
+    labs(
+         x = "Framing Message", 
+         y = "Change in Trust in ChatGPT") +
+    theme_bw( ) + # apply white background, black border to the plot
+    theme(
+          axis.title.x  = element_text(size = 12, face = "bold", margin = margin(t = 10),family = "Times"), #set the size, boldness, top margin and style of the x axis title 
+          axis.title.y  = element_text(size = 12, face = "bold",margin = margin(r = 10),family = "Times"), #set the size, boldness, right margin and style of the y axis title 
+          axis.text = element_text(size = 12, color = "black",family = "Times"), #set the size, color, and style of both axis texts
+          legend.title = element_text(size = 12, face = "bold",family = "Times"), #set the size, boldness, and style of the legend title
+          legend.text = element_text(size = 12,family = "Times"), #set the size and style of the legend text
+          legend.position = c(0.9,0.8))+ #specify the position of legend within the plot
+    coord_cartesian(ylim = c(0, 15))+ #set the limit of y axis to the range of 0 to 15
+    scale_y_continuous(breaks = seq(from = 0, to = 15, by = 2), #set a tick mark on the y-axis every 2 unit increase in y
+                       labels = seq(from = 0, to = 15, by = 2)) #label the tick on the y-axis every 2 unit increase in y
+
+ggsave("Papervis.png", dpi=300, dev='png', height=5, width=7, units="in") #save the graph
+```
+
+### For Poster
+
+```{r}
+Clean_AItrust %>%
+    ggplot(aes(y = TrustDiff, x = FramingM, color = Accuracy, width = 20, height = 50))+
+    stat_summary(
+        fun = mean, 
+        geom = "point",
+        size = 4) +
+    stat_summary(
+        fun = mean, 
+        geom = "line", 
+        size = 1, 
+        aes(group = Accuracy)) +
+    stat_summary(
+        fun.data = mean_se, 
+        geom = "errorbar", 
+        width = 0.2, 
+        size = 1)+
+    labs(x = "Framing Message", 
+         y = "Change in Trust in ChatGPT",
+         title = str_wrap("Do Negative Framing Message and ChatGPT Accurary influence College Students' Trust in ChatGPT?", width = 50)) +
+    theme(
+          plot.title = element_text(size = 30, face = "bold", hjust = 0, margin = margin(b = 15)), #Set the size, boldness and margin of the plot title, and left align the title
+          axis.title.x  = element_text(size = 27, face = "bold", margin = margin(t = 15)),#set the size, boldness, and top margin of the x axis title 
+          axis.title.y  = element_text(size = 27, face = "bold",margin = margin(r = 10)),#set the size, boldness, and right marginof the y axis title 
+          axis.text = element_text(size = 27, color = "black"), #set the size, color, and style of both axis texts
+          legend.title = element_text(size = 27, face = "bold"), #set the size, boldness, and style of the legend title
+          legend.text = element_text(size = 27) #set the size and style of the legend text
+          )+
+    coord_cartesian(ylim = c(0, 15))+#set the limit of y axis to the range of 0 to 15
+    scale_y_continuous(breaks = seq(from = 0, to = 15, by = 2), #set a tick mark on the y-axis every 2 unit increase in y
+                       labels = seq(from = 0, to = 15, by = 2))#label the tick on the y-axis every 2 unit increase in y
+
+ggsave("Postervis.png", dpi=300, dev='png', height=10, width = 14, units="in") #save the graph
+```
+
+# Data Analysis
+
+### Run 2\*2 Between Subject Factorial model
+
+Test for:
+
+1.  Main effect of Factor: Framing Message
+2.  Main effect of Factor: ChatGPT Accuracy
+3.  Interaction between two factors
+
+```{r}
+TrustDiff_model <- lm(TrustDiff ~ FramingM * Accuracy, data= Clean_AItrust) 
+TrustDiff_model
+```
+
+```{r}
+anova(TrustDiff_model)
+summary(TrustDiff_model)
+```
+
+### Pairwise Comparisons
+
+Means for each condition
+
+```{r}
+emmeans(TrustDiff_model,"FramingM")
+emmeans(TrustDiff_model,"Accuracy")
+emmeans(TrustDiff_model,"FramingM","Accuracy") 
+```
+
+Tukey's Result
+
+```{r}
+TukeyHSD(TrustDiff_model)
+```
+
+### Number of participants in each condition
+
+```{r}
+Clean_AItrust %>% 
+  group_by(FramingM,Accuracy) %>% 
+  summarize( ParticipantsNum = n(),
+             meantd = mean(TrustDiff),
+             sdtrustdiff = sd(TrustDiff))
+```
+
+### Demographic: Participants' Academic Standing
+
+```{r}
+tally(Clean_AItrust$College) 
+```
+
+# Exploratory Analysis (not included in paper)
+
+### Trust3Mean Visualization
+
+```{r}
+Clean_AItrust %>%
+    ggplot(aes(y = Trust3Mean, x = FramingM, color = Accuracy))+
+    stat_summary(
+        fun = mean, 
+        geom = "point", 
+        size = 4) +
+    stat_summary(
+        fun = mean, 
+        geom = "line", 
+        size = 1, 
+        aes(group = Accuracy)) +
+    stat_summary(
+        fun.data = mean_se, 
+        geom = "errorbar", 
+        width = 0.2, 
+        size = 1)+
+    labs(x = "Framing Messaging", 
+         y = "Trust towards three questions of ChatGPT",
+         ) +
+    theme(text = element_text(size = 16))
+```
+
+#### Run 2\*2 Between Subject Factorial model on Trust3mean
+
+```{r}
+Trust3Mean_Accuracy_model <- lm(Trust3Mean ~ Accuracy + FramingM, data = Clean_AItrust)
+Trust3Mean_Accuracy_model 
+```
+
+```{r}
+anova(Trust3Mean_Accuracy_model)
+```
+
+### Feeling3Mean Visualization
+
+```{r}
+Clean_AItrust %>%
+    ggplot(aes(y =Feeling3Mean , x = FramingM, color = Accuracy))+
+    stat_summary(
+        fun = mean, 
+        geom = "point", 
+        size = 4) +
+    stat_summary(
+        fun = mean, 
+        geom = "line", 
+        size = 1, 
+        aes(group = Accuracy)) +
+    stat_summary(
+        fun.data = mean_se, 
+        geom = "errorbar", 
+        width = 0.2, 
+        size = 1)+
+    labs(x = "Framing Message", 
+         y = "Feeling towards ChatGPT",
+         title = "Effect of Framing Message and ChatGPT Accurary on 
+    College Students' General Emotion towards ChatGPT") +
+    theme(text = element_text(size = 15))
+
+```
+
+#### Run 2\*2 Between Subject Factorial model on Feeling3mean
+
+```{r}
+Feeling_model <- lm(Feeling3Mean ~ FramingM * Accuracy, data = Clean_AItrust)
+Feeling_model
+```
+
+```{r}
+anova(Feeling_model)
+```
+
+### Feeling_Trust visualization
+
+```{r}
+Clean_AItrust %>%
+    ggplot(aes(y = Feeling3Mean , x = Trust3Mean))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+    labs(x = "Trust in ChatGPT", 
+         y = "Feeling in ChatGPT",
+         title = "Correlation between Trust and Feeling in ChatGPT") +
+    theme(text = element_text(size = 15))
+```
+
+#### Run Simple Linear Regression Model
+
+```{r}
+lm(Trust3Mean ~ Feeling3Mean, data = Clean_AItrust)
+```
